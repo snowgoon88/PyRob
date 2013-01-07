@@ -1,0 +1,7 @@
+* ? Séparer Cycle, ToReach en différentes classes
+* TODO Faire un GIT
+* [0/2] Cycle
+** TODO mémoriser les extrémités
+** TODO dessiner les extrémites
+* [/] Robots
+
