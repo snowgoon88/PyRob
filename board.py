@@ -28,6 +28,7 @@
 import pygtk
 import gtk, gobject, cairo
 import copy
+import math
 
 # ******************************************************************************
 # ************************************************************************ Board
@@ -392,19 +393,21 @@ class Board( gtk.DrawingArea ):
             c.clean_of_tag( tag )
             
 # ******************************************************************************
-# ************************************************************************ TODO
+# ************************************************************************ Cycle
 # ******************************************************************************
 class Cycle:
     """
     Un Cycle va d'une bifurcation à une bifurcation, en ne passant que par des coins.
+    Constitué par des _points, dont les extrémités (et des _arcs pour l'affichage)
+
     # >> bb.detect_corners()
     # >> c = Cycle(bb, "c1")
     # >> c.build_from_corner( (4,0), 3)
     # >> bb._cycles.append( t )
     # >> bb.draw_queue()
     """
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------- todo
+
+    # --------------------------------------------------------------------- init
     def __init__(self, bb, label = "cycle"):
         """
         :Param
@@ -414,11 +417,12 @@ class Cycle:
         self._label = label
         self._depth_max = 1
         self._points = []
+        self._ext = []
         self._arcs = []
         self._color = (0,1,0)
 
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------- todo
+
+    # --------------------------------------------------------------------- draw
     def draw( self, cr):
         """
         Dessine la suite des arcs
@@ -427,12 +431,16 @@ class Cycle:
         """
         # couleur et épaisseur
         cr.set_source_rgb( *self._color )
-        cr.set_line_width(0.05)
+        cr.set_line_width(0.02)
         for arc in self._arcs:
             # segments
             cr.move_to( *arc[0] )
             cr.line_to( *arc[1] )
         cr.stroke()
+        # extremités
+        for ext in self._ext:
+            cr.arc( ext._pos[0], ext._pos[1], 0.05, 0, math.pi*2 )
+            cr.stroke()
 
     # -------------------------------------------------------------------- clean
     def clean( self ):
@@ -441,6 +449,7 @@ class Cycle:
         """
         self._arcs = []
         self._points = []
+        self._ext = []
         self._bb.clean_cells_of_tag( self._label )
 
     # -------------------------------------------------------- build_from_corner
@@ -474,6 +483,7 @@ class Cycle:
         cell = self._bb.get_cell( pos )
         if cell._type != 'corner':
             print tab," ",pos," n'est pas un corner"
+            self._ext.append( cell )
             return
         # Vers la droite
         if dir_ori != self._bb.go_left :
