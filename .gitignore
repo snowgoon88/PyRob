@@ -1,0 +1,10 @@
+# What to ignore
+bin/
+*.zip
+*.jar
+*.data
+*.pyc
+*~
+Ressources
+
+
