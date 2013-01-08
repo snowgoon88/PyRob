@@ -42,7 +42,7 @@ class Robot(object):
         """Enlève le robot du Board.
         """
         if self._pos != None:
-            cell = self._board.get_cell( pos )
+            cell = self._board.get_cell( self._pos )
             cell._rob = None
             self._pos = None
 
