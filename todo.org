@@ -3,5 +3,9 @@
 * [2/2] Cycle
 ** DONE mémoriser les extrémités
 ** DONE dessiner les extrémites
-* [/] Robots
+* [0/4] Robots
+** TODO Placer robot
+** TODO Couper un cycle par un robot
+** TODO Tenir compte de robots dans Cycle
+** TODO Déplacer robot à la souris
 

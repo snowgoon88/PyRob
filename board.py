@@ -27,6 +27,7 @@
 
 import pygtk
 import gtk, gobject, cairo
+import robot
 import copy
 import math
 
@@ -37,7 +38,7 @@ class Grafik(object):
     """
     Quelques facilité pour le graphisme.
     """
-    _colors = [ (1,0,0), (0,1,0), (0,0,1), (1,1,0), (1,0,1), (0,1,1) ]
+    _colors = [ (1,0,0), (0,1,0), (0,0,1), (0.9,0.9,0), (1,0,1), (0,1,1) ]
 
     # --------------------------------------------------------------------- init
     def __init__(self, ):
@@ -75,6 +76,7 @@ class Board( gtk.DrawingArea ):
         self._cells = {}
         self._cycles = []
         self._tree = []
+        self._robot = []
 
         # no handle to the function called in idle.
         self.idleWork = -1
@@ -190,10 +192,21 @@ class Board( gtk.DrawingArea ):
         """
         for t in self._tree:
             t.draw( cr )
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def draw_robots(self, cr):
+        """
+        Dessine tous les robots attachés.
+        :Param
+        - cr Cairo Context
+        """
+        for r in self._robot:
+            r.draw( cr )
+
     # --------------------------------------------------------------------- draw
     def draw(self, cr, width, height):
         """
-        Remplis le canevas de la couleur de fond (blanc),
+        Remplis le canevas de la couleur de fond (gris),
         puis dessine tout (axes, board, walls, cycles, tree, ...)
         :Param
         - cr Cairo Context
@@ -201,7 +214,7 @@ class Board( gtk.DrawingArea ):
         - height du canevas Cairo
         """
         # Fill the background with white
-        cr.set_source_rgb(1, 1, 1)
+        cr.set_source_rgb(0.8, 0.8, 0.8)
         cr.rectangle(0, 0, width, height)
         cr.fill()
         # set up a transform so that board (0,0) x (_size,_size)
@@ -216,7 +229,7 @@ class Board( gtk.DrawingArea ):
         self.draw_walls(cr)
         self.draw_cycles(cr)
         self.draw_trees(cr)
-
+        self.draw_robots(cr)
     # ----------------------------------------------------------------- draw_cbk
     def draw_cbk( self, widget, event ):
         """
@@ -910,7 +923,12 @@ def create_board5():
 # ************************************************************************* MAIN
 # ******************************************************************************
 if __name__ == "__main__":
-    bb = create_board16()
+    bb = create_board5()
+    #
+    rr = robot.Robot( bb )
+    rr.put( (3,1) )
+    bb._robot.append( rr )
+    # bb = create_board16()
     bb.build_basic_cycles()
     affiche(bb)
 
