@@ -27,7 +27,8 @@
 
 import pygtk
 import gtk, gobject, cairo
-import robot
+from robot import *
+from cell import *
 import copy
 import math
 
@@ -61,8 +62,8 @@ class Board( gtk.DrawingArea ):
     # --------------------------------------------------------------------- init
     def __init__(self, size, vert_wall = [], hor_wall = [] ):
         """
-        Initialise la Board de taille size x size.
-        No Cells, Cycles or Tree.
+        Initialise la Board de taille size x size. Crée les Cell
+        No Cycles, Tree, Robots.
         :Param
         - size Taille d'un coté de la Board
         """
@@ -72,8 +73,12 @@ class Board( gtk.DrawingArea ):
         self._size = size
         self._ver_wall = vert_wall
         self._hor_wall = hor_wall
-
+        # Crée toutes les Cell
         self._cells = {}
+        for x in range(self._size):
+            for y in range(self._size):
+                self._cells[ (x,y) ] = Cell( (x,y) )
+
         self._cycles = []
         self._tree = []
         self._robot = []
@@ -265,44 +270,43 @@ class Board( gtk.DrawingArea ):
     # ----------------------------------------------------------------- go_right
     def go_right( self, pos_x, pos_y ):
         """
-        TODO ne tient compte que des murs !
         :Return
         - (x,y) atteint dans la direction à partir de (pos_x,pos_y)
         """
         walls = self._ver_wall[pos_y]
-        pos = min([p for p in walls if p>pos_x]+[self._size])
-        return (pos-1,pos_y)
+        # pos : position murs, extremite et éventuels robots
+        pos = [p for p in walls if p>pos_x]+[self._size]+[r._pos[0] for r in self._robot if (r._pos[1] == pos_y and r._pos[0]>pos_x)]
+        return (min(pos)-1,pos_y)
     # ------------------------------------------------------------------ go_left
     def go_left( self, pos_x, pos_y ):
         """
-        TODO ne tient compte que des murs !
         :Return
         - (x,y) atteint dans la direction à partir de (pos_x,pos_y)
         """
         walls = self._ver_wall[pos_y]
-        pos = max([p for p in walls if p<=pos_x]+[0])
-        return (pos,pos_y)
+        # pos : position murs, extremite et éventuels robots
+        pos = [p for p in walls if p<=pos_x]+[0]+[r._pos[0]+1 for r in self._robot if (r._pos[1] == pos_y and r._pos[0]<pos_x)]
+        return (max(pos),pos_y)
     # -------------------------------------------------------------------- go_up
     def go_up( self, pos_x, pos_y ):
         """
-        TODO ne tient compte que des murs !
         :Return
         - (x,y) atteint dans la direction à partir de (pos_x,pos_y)
         """
         walls = self._hor_wall[pos_x]
-        pos = min([p for p in walls if p>pos_y]+[self._size])
-        return (pos_x,pos-1)
+        # pos : position murs, extremite et éventuels robots
+        pos = [p for p in walls if p>pos_y]+[self._size]+[r._pos[1] for r in self._robot if (r._pos[0] == pos_x and r._pos[1]>pos_y)]
+        return (pos_x,min(pos)-1)
     # ------------------------------------------------------------------ go_down
     def go_down( self, pos_x, pos_y ):
         """
-        TODO ne tient compte que des murs !
         :Return
         - (x,y) atteint dans la direction à partir de (pos_x,pos_y)
         """
         walls = self._hor_wall[pos_x]
-        pos = max([p for p in walls if p<=pos_y]+[0])
-        return (pos_x,pos)
-
+        # pos : position murs, extremite et éventuels robots
+        pos = [p for p in walls if p<=pos_y]+[0]+[r._pos[1]+1 for r in self._robot if (r._pos[0] == pos_x and r._pos[1]<pos_y)]
+        return (pos_x,max(pos))
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -337,16 +341,19 @@ class Board( gtk.DrawingArea ):
         corners = []
         for x in range(self._size):
             for y in range(self._size):
+                # Pas forbid
+                if self.get_cell((x,y))._type == 'forbid':
+                    break
                 # nb de mur
                 nb_ver = 0
                 nb_hor = 0
-                if x == 0 or x in self._ver_wall[y]:
+                if x == 0 or x in self._ver_wall[y] or self.get_cell((x-1,y)).has_rob():
                     nb_ver += 1
-                if x == (self._size-1) or (x+1) in self._ver_wall[y]:
+                if x == (self._size-1) or (x+1) in self._ver_wall[y] or self.get_cell((x+1,y)).has_rob():
                     nb_ver += 1
-                if y == 0 or y in self._hor_wall[x]:
+                if y == 0 or y in self._hor_wall[x] or self.get_cell((x,y-1)).has_rob():
                     nb_hor += 1
-                if y == (self._size-1) or (y+1) in self._hor_wall[x]:
+                if y == (self._size-1) or (y+1) in self._hor_wall[x] or self.get_cell((x,y+1)).has_rob():
                     nb_hor += 1
                 if nb_ver == 1 and nb_hor == 1:
                     cell = self.get_cell( (x,y) )
@@ -375,19 +382,13 @@ class Board( gtk.DrawingArea ):
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
     def get_cell( self, pos ):
-        """
-        Crée la Cell si elle n'existe pas.
+        """La Cell à la position
         :Param
         - pos (x,y) : position dans la Board
         :Returns
         - Cell : cell à la position 'pos'
         """
-        if self._cells.has_key( pos ):
-            return self._cells[pos]
-        else:
-            cell = Cell( pos )
-            self._cells[pos] = cell
-            return cell
+        return self._cells[pos]
     # --------------------------------------------------------------- dump_cells
     def dump_cells( self ):
         """
@@ -523,6 +524,8 @@ class Cycle:
                 cell.append_to_tag( self._label, self._bb.go_left )
                 # On continue ?
                 if possible in self._points :
+                    # # c'est aussi une extrémité
+                    # self._ext.append( cell )
                     return
                 else :
                     self._points.append( possible )
@@ -552,6 +555,8 @@ class Cycle:
                 cell.append_to_tag( self._label, self._bb.go_up )
                 # On continue ?
                 if possible in self._points :
+                    # # c'est aussi une extrémité
+                    # self._ext.append( cell )
                     return
                 else :
                     self._points.append( possible )
@@ -581,6 +586,8 @@ class Cycle:
                 cell.append_to_tag( self._label, self._bb.go_right )
                 # On continue ?
                 if possible in self._points :
+                    # # c'est aussi une extrémité
+                    # self._ext.append( cell )
                     return
                 else :
                     self._points.append( possible )
@@ -610,6 +617,8 @@ class Cycle:
                 cell.append_to_tag( self._label, self._bb.go_down )
                 # On continue ?
                 if possible in self._points :
+                    # # c'est aussi une extrémité
+                    # self._ext.append( cell )
                     return
                 else :
                     self._points.append( possible )
@@ -784,57 +793,6 @@ class ReachTree:
 # ************************************************************************* TODO
 # ******************************************************************************
 
-# ******************************************************************************
-# ************************************************************************* Cell
-# ******************************************************************************
-class Cell(object):
-    """
-    Une Cell a:
-    - une position (_pos=(x,y)),
-    - un type (_type = 'vide',... )
-    - un ensemble de valeurs attaché à des labels _values = { label:val }
-    """
-
-    # --------------------------------------------------------------------- init
-    def __init__(self, pos):
-        """
-        Création comme une Cell 'vide' sans valeurs.
-        :Param
-        - pos (x,y)
-        """
-        self._pos = pos
-        self._type = 'vide'
-        self._values = {}
-
-    # ---------------------------------------------------------------------- str
-    def __str__(self):
-        """
-        Représentation comme str d'une Cell.
-        """
-        return self._pos.__str__()+" ["+self._type+"] "+"values="+self._values.__str__()
-
-    # ------------------------------------------------------------- clean_of_tag
-    def clean_of_tag( self, tag ):
-        """
-        Enlève la valeur associée au 'tag' donné
-        :Param
-        - tag (str)
-        """
-        if self._values.has_key( tag ):
-            self._values.pop( tag )
-    # ------------------------------------------------------------ append_to_tag
-    def append_to_tag( self, tag, val):
-        """
-        Valeur de tag est une liste, ajoute ou crée.
-        """
-        if self._values.has_key( tag ) :
-            self._values[tag].append( val )
-        else:
-            self._values[tag] = [val]
-# ******************************************************************************
-# ************************************************************************* TODO
-# ******************************************************************************
-
 # GTK mumbo-jumbo to show the widget in a window and quit when it's closed
 def affiche(widget):
     window = gtk.Window()
@@ -892,6 +850,14 @@ def create_board16():
                   [10,15],
                   [4,12]]
     board = Board(16, ver_wall, hor_wall)
+    # Case au centre sont interdites
+    c = board.get_cell( (7,7) )
+    c._type = 'forbid'
+    c = board.get_cell( (7,8) )
+    c._type = 'forbid'
+    c = board.get_cell( (8,7) )
+    c._type = 'forbid'
+    c = board.get_cell( (8,8) )
     return board
 # **************************************************************** create_board5
 def create_board5():
@@ -917,18 +883,23 @@ def create_board5():
                   [4],
                   [2]]
     board = Board(5, ver_wall, hor_wall )
+    # Case au centre est interdite
+    c = board.get_cell( (2,2) )
+    c._type = 'forbid'
     return board
 
 # ******************************************************************************
 # ************************************************************************* MAIN
 # ******************************************************************************
 if __name__ == "__main__":
-    bb = create_board5()
+    # bb = create_board5()
+    bb = create_board16()
     #
-    rr = robot.Robot( bb )
-    rr.put( (3,1) )
+    rr = Robot( bb )
+    rr.put( (12,3) )
     bb._robot.append( rr )
-    # bb = create_board16()
+    # bb.detect_corners()
+    # bb.dump_cells()
     bb.build_basic_cycles()
     affiche(bb)
-
+    

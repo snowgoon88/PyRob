@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import math
-
 # ******************************************************************************
 # ************************************************************************* TODO
 # ******************************************************************************
@@ -30,20 +29,22 @@ class Robot(object):
         :Param
         - `pos`: (x,y)
         """
-        # Cell doit pas être "center" ou "robot"
+        # Cell doit pas être "forbid" ou avoir un robot
         cell = self._board.get_cell( pos )
-        if cell._type.startswith( ('c','r') ) : 
+        if cell._type.startswith( ('f','r') ) or cell.has_rob(): 
             raise RobotPosError( cell )
         # Pose le robot
-        cell._type = self._label
+        cell._rob = self
         self._pos = cell._pos
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
     def remove(self, ):
         """Enlève le robot du Board.
         """
-        cell._type = 'void'
-        self._pos = None
+        if self._pos != None:
+            cell = self._board.get_cell( pos )
+            cell._rob = None
+            self._pos = None
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -70,7 +71,7 @@ class RobotPosError(Exception):
         :Param
         - `cell`: Cell
         """
-        Exception.__init__( 'Rob mal placé pos={0}, type={1}'.format( cell._pos, cell._type))
+        Exception.__init__( 'Rob mal placé pos={0}, type={1}, rob={2}'.format( cell._pos, cell._type, cell._rob))
 
 # ******************************************************************************
 # ************************************************************************** END
