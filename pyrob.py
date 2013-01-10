@@ -41,10 +41,12 @@ class PyRob(object):
         main_hbox = gtk.HBox(homogeneous=False, spacing=0)
         main_hbox.pack_start(self._board, expand=True, fill=True, padding=0)
         self._board.show()
-        # Button
+        # VBOX Buttons ---------------
         btn_vbox = gtk.VBox(homogeneous=False, spacing=0)
         main_hbox.pack_start(btn_vbox, expand=False, fill=True, padding=10)
         btn_vbox.show()
+
+        ## Recherche en largeur
         label = gtk.Label("Recherche LARGEUR")
         btn_vbox.pack_start(label, expand=False, fill=False, padding=0)
         label.show()
@@ -67,12 +69,29 @@ class PyRob(object):
         arc_btn.connect( "toggled", self.bsearch_arc_cbk, "Arc_BT")
         btn_vbox.pack_start(arc_btn, expand=False, fill=False, padding=0)
         arc_btn.show()
-        
         # 
         separator = gtk.HSeparator()
         btn_vbox.pack_start(separator, expand=False, fill=True, padding=5)
         separator.show()
-        
+
+        ## Cycles
+        label = gtk.Label("Cycles")
+        btn_vbox.pack_start(label, expand=False, fill=False, padding=0)
+        label.show()
+        arc_btn = gtk.CheckButton("arcs")
+        arc_btn.set_active( self._board._fg_draw_cycles )
+        arc_btn.connect( "toggled", self.cycles_arc_cbk, "Arc_CY")
+        btn_vbox.pack_start(arc_btn, expand=False, fill=False, padding=0)
+        arc_btn.show()
+        update_btn = gtk.Button("Update")
+        update_btn.connect( "clicked", self.cycles_update_cbk, "Update_CY")
+        btn_vbox.pack_start(update_btn, expand=False, fill=False, padding=0)
+        update_btn.show()
+        # 
+        separator = gtk.HSeparator()
+        btn_vbox.pack_start(separator, expand=False, fill=True, padding=5)
+        separator.show()
+
         return main_hbox
     # --------------------------------------------------------------- bbasic_cbk
     def bbasic_cbk(self, widget, data=None):
@@ -129,6 +148,27 @@ class PyRob(object):
         """
         print "btn  {0} pressed".format(data)
         self._btree._draw_arc = widget.get_active()
+        self._board.queue_draw()
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def cycles_arc_cbk(self, widget, data=None):
+        """Affiche ou non les arcs des Cycles
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        self._board._fg_draw_cycles = widget.get_active()
+        self._board.queue_draw()
+    def cycles_update_cbk(self, widget, data=None):
+        """Reconstruits les cycles de _board
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        self._board.clean_cycles()
+        self._borad.build_basic_cycles()
         self._board.queue_draw()
 
         

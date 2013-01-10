@@ -82,6 +82,8 @@ class Board( gtk.DrawingArea ):
         self._cycles = []
         self._tree = []
         self._robot = []
+        # What to draw
+        self._fg_draw_cycles = True
 
         # no handle to the function called in idle.
         self.idleWork = -1
@@ -232,7 +234,8 @@ class Board( gtk.DrawingArea ):
         # self.draw_axes(cr)
         self.draw_board(cr)
         self.draw_walls(cr)
-        self.draw_cycles(cr)
+        if self._fg_draw_cycles :
+            self.draw_cycles(cr)
         self.draw_trees(cr)
         self.draw_robots(cr)
     # ----------------------------------------------------------------- draw_cbk
