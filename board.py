@@ -254,6 +254,23 @@ class Board( gtk.DrawingArea ):
         #
         self.draw(cr, *self.window.get_size())
         return True
+
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def click_on_cell(self, pos_x, pos_y):
+        """Y met le robot rouge.
+        TODO suppose que c'est le robot rouge.
+        :Param
+        - `pos_x,pos_y`: position cliquée
+        """
+        self._robot[0].remove()
+        self._robot[0].put( (pos_x,pos_y) )
+        #
+        self.clean_cycles()
+        self.build_basic_cycles()
+        #
+        self.queue_draw()
+
     # ---------------------------------------------------------------- click_cbk
     def click_cbk( self, widget, event ):
         """
@@ -261,7 +278,14 @@ class Board( gtk.DrawingArea ):
         Callback de gtk.DrawingArea.
         """
         width,height = self.window.get_size()
-        print event," x=",event.x," (",event.x*(self._size+2.0)/width-0.5,") y=",event.y," (",(height-event.y)*(self._size+2.0)/height-0.5,")"
+        pos_x = (int) (event.x*(self._size+2.0)/width-1.0)
+        pos_y = (int) ((height-event.y)*(self._size+2.0)/height-1.0)
+        # print event," x=",event.x," (",event.x*(self._size+2.0)/width-1.0,") y=",event.y," (",(height-event.y)*(self._size+2.0)/height-1.0,")"
+        # print "pos = {0},{1}".format(pos_x,pos_y)
+        #
+        # Action
+        self.click_on_cell( pos_x, pos_y )
+
     # ------------------------------------------------------------ idle_callback
     def idle_callback(self):
         """
@@ -326,7 +350,7 @@ class Board( gtk.DrawingArea ):
             print "Corner : ",coin
             # TODO Déjà dans un cycle ?
             cn = self.get_cycle( coin._pos )
-            if len(cn) == 0 :
+            if len(cn) == 0 and not coin.has_rob():
                 print " build cycle..."
                 # Faire un nouveau cycle
                 cyc = Cycle( self, 'c'+str(len(self._cycles)) )
@@ -345,8 +369,10 @@ class Board( gtk.DrawingArea ):
         for x in range(self._size):
             for y in range(self._size):
                 # Pas forbid
-                if self.get_cell((x,y))._type == 'forbid':
+                cell = self.get_cell((x,y))
+                if cell._type == 'forbid':
                     break
+                cell._type = 'void'
                 # nb de mur
                 nb_ver = 0
                 nb_hor = 0
@@ -359,7 +385,6 @@ class Board( gtk.DrawingArea ):
                 if y == (self._size-1) or (y+1) in self._hor_wall[x] or self.get_cell((x,y+1)).has_rob():
                     nb_hor += 1
                 if nb_ver == 1 and nb_hor == 1:
-                    cell = self.get_cell( (x,y) )
                     cell._type = 'corner'
                     corners.append( cell )
         return corners
@@ -381,6 +406,14 @@ class Board( gtk.DrawingArea ):
             if tag.startswith( 'c' ):
                 cycle_names.append( tag )
         return cycle_names
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def clean_cycles(self, ):
+        """Nettoie tous les cycles
+        """
+        for c in self._cycles:
+            self.clean_cells_of_tag( c._label )
+        self._cycles = []
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -928,7 +961,7 @@ if __name__ == "__main__":
     bb = create_board16()
     #
     rr = Robot( bb )
-    rr.put( (12,3) )
+    rr.put( (3,1) )
     bb._robot.append( rr )
     # bb.detect_corners()
     # bb.dump_cells()
