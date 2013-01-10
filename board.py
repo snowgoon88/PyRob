@@ -675,6 +675,11 @@ class ReachTree:
         self._label = label
         # un board
         self._bb = board
+
+        # Pour la recherche incrémentale "manuelle"
+        self._depth = 0
+        self._cell_to_expand = []
+
         # pour dessiner
         self._arcs = []
         self._color = (0,0,1)
@@ -736,6 +741,30 @@ class ReachTree:
                 next_cells.extend( self.expand( c[0], c[1], None, depth ) )
             cell_to_expand = next_cells
             depth += 1
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def build_step(self, pos ):
+        """Construit l'arbre de manière incrémentale, en largeur.
+        => self.expand_step
+        :Param
+        - `pos`: (x,y) position de départ
+        """
+        self._cell_to_expand = [ (None, pos) ]
+        self._depth = 0
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def expand_step(self, ):
+        """Une étape de recherche en largeur.
+        """
+        if self._cell_to_expand <> []:
+            # les cell à visiter au niveau prochain
+            next_cells = []
+            while( self._cell_to_expand <> [] ):
+                c = self._cell_to_expand.pop()
+                # ajoutes les éventuelles cell suivantes
+                next_cells.extend( self.expand( c[0], c[1], None, self._depth ) )
+            self._cell_to_expand = next_cells
+            self._depth += 1
     # ------------------------------------------------------------------- expand
     def expand( self, prev_pos, pos, prev_dir, depth=0):
         """
