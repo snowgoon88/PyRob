@@ -1,15 +1,15 @@
 * ? Séparer Cycle, ToReach en différentes classes
 * DONE Faire un GIT
-* [0/2] GUI
-** TODO On/off Cycles avec update
+* [1/2] GUI
+** DONE On/off Cycles avec update
 ** TODO ON:Off continuous update of cycles.
 * [2/2] Cycle
 ** DONE mémoriser les extrémités
 ** DONE dessiner les extrémites
-* [3/3] Robots
+* [2/3] Robots
 ** DONE Placer robot
 ** Couper un cycle par un robot
 Pas forcément utile parce que selon l'ordre dans lequel on place ou déplace les robots, un Cyle "parent" coupé et recoupé ne va pas forcément bien se recombiner. Il semble plus facile de reconstruire les Cycles à chaque fois...
 ** DONE Tenir compte de robots dans Cycle
-** DONE Déplacer robot à la souris
+** TODO Déplacer robot à la souris
 

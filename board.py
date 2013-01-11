@@ -9,7 +9,7 @@
 # Exemple de run
 # >> bb = create_board5()
 # >> affiche(bb)
-# >> t = ReachTree( bb, "t1" )
+# >> t = BroadTree( bb, "t1" )
 # >> t._draw_value = True # aussi valeurs des cases
 # >> bb._tree.append( t )
 # >> t.clean()
@@ -29,6 +29,7 @@ import pygtk
 import gtk, gobject, cairo
 from robot import *
 from cell import *
+from search import *
 import copy
 import math
 
@@ -69,6 +70,8 @@ class Board( gtk.DrawingArea ):
         """
         gtk.DrawingArea.__init__(self)
         print "Board.__init__"
+        self._go = {'Right':self.go_right, 'Left':self.go_left,
+                    'Up':self.go_up, 'Down':self.go_down}
 
         self._size = size
         self._ver_wall = vert_wall
@@ -685,174 +688,6 @@ class Cycle:
                         return (True, ind, ind+1)
         return (False, None, None)
 
-class ReachTree:
-    """
-    Quels points (Cell) peuvent être atteint à partir d'une position de départ.
-    Met à jour les Cell de Board (avec un tag = self._label), la valeur étant celle de la profondeur dans l'arbre.
-    Constitué d'une collection d'arcs = (pos, pos).
-    
-    # >> t = ReachTree( bb, "t1" )
-    # >> t._draw_arc = True
-    # >> t._draw_value = True # aussi valeurs des cases
-    # >> bb._tree.append( t )
-    # >> t.clean()
-    # >> t.build( (0,1), 6)
-    # >> bb.draw_queue()    
-    """
-    # --------------------------------------------------------------------- init
-    def __init__( self, board, label="reach" ):
-        """
-        Attaché à un Board, avec un label unique!
-        :Param
-        - board un Board
-        - label (str) doit être unique
-        """
-        # un label
-        self._label = label
-        # un board
-        self._bb = board
-
-        # Pour la recherche incrémentale "manuelle"
-        self._depth = 0
-        self._cell_to_expand = []
-
-        # pour dessiner
-        self._arcs = []
-        self._color = (0,0,1)
-        # qu'est-ce qu'on dessine.
-        self._draw_value = False
-        self._draw_arc = True
-
-    # --------------------------------------------------------------------- draw
-    def draw( self, cr):
-        """
-        Dessine la suite des arcs, et les valeurs des cases.
-        :Param
-        - cr Cairo Context
-        """
-        # couleur et épaisseur
-        cr.set_source_rgb( *self._color )
-        cr.set_line_width(0.01)
-        if self._draw_arc:
-            for arc in self._arcs:
-                # segments
-                cr.move_to( *arc[0] )
-                cr.line_to( *arc[1] )
-            cr.stroke()
-        # aussi les cases ?
-        if self._draw_value:
-            for p,c in self._bb._cells.iteritems():
-                if c._values.has_key( self._label):
-                    self._bb.draw_value( cr, str(c._values[self._label]), p[0]+0.3, p[1]-0.5)
-
-    # -------------------------------------------------------------------- clean
-    def clean( self ):
-        """
-        Faut nettoyer self._arcs mais aussi les valeurs des Cells de Board.
-        """
-        self._arcs = []
-        self._bb.clean_cells_of_tag( self._label )
-
-    # -------------------------------------------------------------------- build
-    def build( self, pos, depth_max=5):
-        """
-        Construit l'arbre en utilisant une recherche en largeur.
-        => self.expand()
-        :Param
-        - pos (x,y) position de départ
-        - depth_max profondeur maximum de recherche
-        """
-        # initialise les cell à visiter
-        cell_to_expand = [ (None, pos) ]
-        depth = 0
-        # tant qu'il en reste à visiter
-        print "cell_to_expand: ",cell_to_expand
-        while( cell_to_expand <> [] and depth < depth_max ):
-            # les cell à visiter au niveau prochain
-            next_cells = []
-            while( cell_to_expand <> [] ):
-                print "Poping from ",cell_to_expand
-                c = cell_to_expand.pop()
-                # ajoutes les éventuelles cell suivantes
-                next_cells.extend( self.expand( c[0], c[1], None, depth ) )
-            cell_to_expand = next_cells
-            depth += 1
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------- todo
-    def build_step(self, pos ):
-        """Construit l'arbre de manière incrémentale, en largeur.
-        => self.expand_step
-        :Param
-        - `pos`: (x,y) position de départ
-        """
-        self._cell_to_expand = [ (None, pos) ]
-        self._depth = 0
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------- todo
-    def expand_step(self, ):
-        """Une étape de recherche en largeur.
-        """
-        if self._cell_to_expand <> []:
-            # les cell à visiter au niveau prochain
-            next_cells = []
-            while( self._cell_to_expand <> [] ):
-                c = self._cell_to_expand.pop()
-                # ajoutes les éventuelles cell suivantes
-                next_cells.extend( self.expand( c[0], c[1], None, self._depth ) )
-            self._cell_to_expand = next_cells
-            self._depth += 1
-    # ------------------------------------------------------------------- expand
-    def expand( self, prev_pos, pos, prev_dir, depth=0):
-        """
-        Ajoute des arcs et des valeurs aux cases.
-        Renvoie une liste de prochains points à parcourir ou None.
-        :Param
-        - prev_pos (x,y) ou None : position d'où on vient
-        - pos (x,y) : position à étendre
-        - prev_dir : TODO utile ???
-        - depth : profondeur actuelle
-        """
-        # tab
-        tab = "--"*depth
-        # cell est la case courante
-        cell = self._bb.get_cell( pos)
-        print tab,"cell=",cell
-        #si case courante n'a pas de valeur attachée à cet arbre
-        # on crée un nouvel arc et, dans chaque direction, on ajoute une 
-        # éventuelle nouvelle cell possible.
-        if( cell._values.has_key( self._label ) is False or (cell._values[self._label] >= depth )):
-            print tab,"case actuelle = ", pos, " depth=",depth
-            # longueur actuelle du trajet
-            cell._values[self._label] = depth
-            # nouvel arc
-            if( prev_pos is not None):
-                self._arcs.append( (prev_pos,pos) )
-            # liste des cases qu'on peut atteindre
-            cell_suivantes = []
-            # vers le haut
-            possible = self._bb.go_up( *pos )
-            if possible <> pos:
-                print tab,"Up OK ",possible
-                cell_suivantes.append( (pos, possible ) )
-            # vers la droite
-            possible = self._bb.go_right( *pos )
-            if possible <> pos:
-                print tab,"Right OK ",possible
-                cell_suivantes.append( (pos, possible) )
-            # vers le bas
-            possible = self._bb.go_down( *pos )
-            if possible <> pos:
-                print tab,"Down OK ",possible
-                cell_suivantes.append( (pos, possible) )
-            # vers la gauche
-            possible = self._bb.go_left( *pos )
-            if possible <> pos:
-                print tab,"Left OK ",possible
-                cell_suivantes.append( (pos, possible) )
-            return cell_suivantes
-        #si case courante a déjà une valeur, elle est forcément inférieure => stop
-        else:
-            return []
 
 # ******************************************************************************
 # ************************************************************************* TODO

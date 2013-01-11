@@ -17,8 +17,10 @@ class PyRob(object):
         """
         # Board
         self._board = create_board16()
-        self._btree = ReachTree( self._board, "tb" )
+        self._btree = BroadTree( self._board, "tb" )
         self._board._tree.append( self._btree )
+        self._dtree = DepthTree( self._board, "td" )
+        self._board._tree.append( self._dtree )
         #
         window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         window.set_title( "Ricochet Robots" )
@@ -73,6 +75,36 @@ class PyRob(object):
         separator = gtk.HSeparator()
         btn_vbox.pack_start(separator, expand=False, fill=True, padding=5)
         separator.show()
+
+        ## Recherche en profondeur
+        label = gtk.Label("Recherche PROFONDEUR")
+        btn_vbox.pack_start(label, expand=False, fill=False, padding=0)
+        label.show()
+        reset_btn = gtk.Button("Reset")
+        reset_btn.connect( "clicked", self.dsearch_reset_cbk, "Reset_DT")
+        btn_vbox.pack_start(reset_btn, expand=False, fill=False, padding=0)
+        reset_btn.show()
+        self._dsearch_step_btn = gtk.Button("Step")
+        self._dsearch_step_btn.connect( "clicked", self.dsearch_step_cbk, "Step_DT")
+        self._dsearch_step_btn.set_sensitive( False )
+        btn_vbox.pack_start(self._dsearch_step_btn, expand=False, fill=False, padding=0)
+        self._dsearch_step_btn.show()
+        value_btn = gtk.CheckButton("valeurs")
+        value_btn.set_active( self._dtree._draw_value )
+        value_btn.connect( "toggled", self.dsearch_valeur_cbk, "Valeur_DT")
+        btn_vbox.pack_start(value_btn, expand=False, fill=False, padding=0)
+        value_btn.show()
+        arc_btn = gtk.CheckButton("arcs")
+        arc_btn.set_active( self._dtree._draw_arc )
+        arc_btn.connect( "toggled", self.dsearch_arc_cbk, "Arc_DT")
+        btn_vbox.pack_start(arc_btn, expand=False, fill=False, padding=0)
+        arc_btn.show()
+        # 
+        separator = gtk.HSeparator()
+        btn_vbox.pack_start(separator, expand=False, fill=True, padding=5)
+        separator.show()
+
+
 
         ## Cycles
         label = gtk.Label("Cycles")
@@ -149,8 +181,8 @@ class PyRob(object):
         print "btn  {0} pressed".format(data)
         self._btree._draw_arc = widget.get_active()
         self._board.queue_draw()
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------- todo
+
+    # ----------------------------------------------------------- cycles_atc_cbk
     def cycles_arc_cbk(self, widget, data=None):
         """Affiche ou non les arcs des Cycles
         :Param
@@ -160,6 +192,7 @@ class PyRob(object):
         print "btn  {0} pressed".format(data)
         self._board._fg_draw_cycles = widget.get_active()
         self._board.queue_draw()
+    # -------------------------------------------------------- cycles_update_cbk
     def cycles_update_cbk(self, widget, data=None):
         """Reconstruits les cycles de _board
         :Param
@@ -168,8 +201,55 @@ class PyRob(object):
         """
         print "btn  {0} pressed".format(data)
         self._board.clean_cycles()
-        self._borad.build_basic_cycles()
+        self._board.build_basic_cycles()
         self._board.queue_draw()
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def dsearch_reset_cbk(self, widget, data=None):
+        """Remet à zéro la recherche en largeur.
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        self._dtree.clean()
+        self._dtree.build_step( (0,0) )
+        self._dsearch_step_btn.set_sensitive( True )
+        print "path=",self._dtree._path," : ",self._dtree._path_ind,"/",len(self._dtree._path)
+        self._board.queue_draw()
+    # --------------------------------------------------------- dsearch_step_cbk
+    def dsearch_step_cbk(self, widget, data=None):
+        """Un step de recherche en profondeur
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        res = self._dtree.expand_step()
+        print "path=",self._dtree._path," : ",self._dtree._path_ind,"/",len(self._dtree._path)
+        self._dsearch_step_btn.set_sensitive( res )
+        self._board.queue_draw()
+    # ------------------------------------------------------- dsearch_valeur_cbk
+    def dsearch_valeur_cbk(self, widget, data=None):
+        """Affiche ou non les valeurs du Tree de recherche en profondeur
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        self._dtree._draw_value = widget.get_active()
+        self._board.queue_draw()
+    # ---------------------------------------------------------- dsearch_arc_cbk
+    def dsearch_arc_cbk(self, widget, data=None):
+        """Affiche ou non les arcs du Tree de recherche en largeur
+        :Param
+        - `widget`: source
+        - `data`: extra data
+        """
+        print "btn  {0} pressed".format(data)
+        self._dtree._draw_arc = widget.get_active()
+        self._board.queue_draw()
+
 
         
 
