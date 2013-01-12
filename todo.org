@@ -6,10 +6,11 @@
 * [2/2] Cycle
 ** DONE mémoriser les extrémités
 ** DONE dessiner les extrémites
-* [2/3] Robots
+* [2/4] Robots
 ** DONE Placer robot
 ** Couper un cycle par un robot
 Pas forcément utile parce que selon l'ordre dans lequel on place ou déplace les robots, un Cyle "parent" coupé et recoupé ne va pas forcément bien se recombiner. Il semble plus facile de reconstruire les Cycles à chaque fois...
 ** DONE Tenir compte de robots dans Cycle
 ** TODO Déplacer robot à la souris
+** TODO Incoporer les robots dans pyrob
 
