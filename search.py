@@ -1,6 +1,283 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from robot import *
+import board as BO
+# ******************************************************************************
+# ************************************************************************* TODO
+# ******************************************************************************
+class State(object):
+    """
+    Un State est une version hyper light de l'information sur le jeu.
+    C'est attaché à un Board "virtuel" (pas garanti qu'on puisse le manipuler
+    à la souris).
+    """
+    _virt_board= None
+    # --------------------------------------------------------------------- init
+    def __init__(self, l_robot):
+        """
+        Un état est une liste de robot.        
+        :Param
+        - `l_robot`: liste de Robots
+        """
+        self._l_robot = l_robot
+        self._gscore = 0
+        self._fscore = self._gscore
+    def __str__(self, ):
+        """
+        """
+        s = '<'
+        for r in self._l_robot:
+            s += r._label+":"+str(r._pos)+" "
+        s += "= "+str(self._gscore)
+        s += '>'
+        return s
+    # --------------------------------------------------------------------- todo
+    def is_same(self, other):
+        """
+        Même nom et position pour tous les robots.
+        WARN : Suppose qu'ils sont dans le même ordre
+        
+        Arguments:
+        - `other`:
+        """
+        for r1,r2 in zip(self._l_robot, other._l_robot):
+            if r1._label != r2._label or r1._pos != r2._pos:
+                return False
+        return True
+
+# ******************************************************************************
+# ************************************************************************* TODO
+# ******************************************************************************
+class AStar(object):
+    """
+    """
+    # --------------------------------------------------------------------- todo
+    def __init__(self,):
+        """
+        """
+        self._virt_board = BO.create_board16()
+        self.set_goal()
+        self.set_start()
+        self._closed = []
+        self._open = [self._start]
+        self._came_from = {}
+    # --------------------------------------------------------------------- todo
+    def search(self, it_max = 10, verb=True):
+        """
+        
+        Arguments:
+        - `it_max`:
+        """
+        nb_ite = 0
+        if verb:
+            print self.dump_str()
+
+        while len(self._open) > 0 and nb_ite < it_max:
+            nb_ite += 1
+
+            # Find current with lower f_score
+            current = None
+            fscore_min = 10000
+            for s in self._open:
+                if s._fscore < fscore_min:
+                    fscore_min = s._fscore
+                    current = s
+            if verb:
+                print "Current="+str(current)
+
+            if self.is_goal_reached( current ) :
+                print current," est le but"
+                return self.reconstruct_path( current )
+
+            self._open.remove( current )
+            self._closed.append( current )
+            neighbors = self.get_neigbors( current )
+            if verb:
+                print "NEIGH=",str([s.__str__() for s in neighbors])
+
+            for nr in neighbors:
+                tentative_gscore = current._gscore + 1
+                #if nr in self._closed:
+                if self.is_in(nr, self._closed):
+                    if verb:
+                        print nr," in CLOSED"
+                    if tentative_gscore >= nr._gscore:
+                        if verb:
+                            print nr," => continue"
+                        continue
+
+                #if nr not in self._open or tentative_gscore < nr._gscore:
+                if not self.is_in(nr,self._open) or tentative_gscore < nr._gscore:
+                    if verb:
+                        print nr," updated and "
+                    self._came_from[nr] = current
+                    nr._gscore = tentative_gscore
+                    nr._fscore = nr._gscore ## WARN + heuristic
+                    if not self.is_in(nr,self._open):
+                        if verb:
+                            print "   + added to OPEN"
+                        self._open.append( nr )
+
+            if verb:
+                print self.dump_str()
+        
+        # Failure
+        if verb:
+            print "GOAL not found in ",nb_ite
+            return None
+    def reconstruct_path(self, state):
+        """
+        Reconstruit le chemin en partant du but atteint par State.
+        Arguments:
+        - `state`:
+        """
+        if self._came_from.has_key(state):
+            path = self.reconstruct_path( self._came_from[state] )
+            path.append(state)
+            return path
+        else:
+            return [state]
+        
+
+    # --------------------------------------------------------------------- todo
+    def get_neigbors(self, state):
+        """
+        Cherche tous les états atteignables depuis 'state'.
+        c-à-d tous ceux qu'on peut atteindre en bougeant un robot.
+        
+        Arguments:
+        - `state`:
+        Return:
+        - liste de State
+        """
+        # Les 'neigbors' possibles 
+        l_neighbors = []
+        # Place les robots sur le virtual Board
+        self._virt_board._robot = state._l_robot
+        # Pour chaque robot
+        for rob in state._l_robot:
+            pos = rob._pos
+            # Up ??
+            new_pos = self._virt_board.go_up( *pos )
+            if new_pos != pos :
+                l_rob = []
+                for r in state._l_robot:
+                    if r._label == rob._label:
+                        new_rob = Robot( None )
+                        new_rob._pos = new_pos
+                        new_rob._label = rob._label
+                        l_rob.append( new_rob )
+                    else:
+                        l_rob.append( r ) # WARN : devrait copier
+                l_neighbors.append( State( l_rob ))
+            # Right ??
+            new_pos = self._virt_board.go_right( *pos )
+            if new_pos != pos :
+                l_rob = []
+                for r in state._l_robot:
+                    if r._label == rob._label:
+                        new_rob = Robot( None )
+                        new_rob._pos = new_pos
+                        new_rob._label = rob._label
+                        l_rob.append( new_rob )
+                    else:
+                        l_rob.append( r ) # WARN : devrait copier
+                l_neighbors.append( State( l_rob ))
+            # Down ??
+            new_pos = self._virt_board.go_down( *pos )
+            if new_pos != pos :
+                l_rob = []
+                for r in state._l_robot:
+                    if r._label == rob._label:
+                        new_rob = Robot( None )
+                        new_rob._pos = new_pos
+                        new_rob._label = rob._label
+                        l_rob.append( new_rob )
+                    else:
+                        l_rob.append( r ) # WARN : devrait copier
+                l_neighbors.append( State( l_rob ))
+            # Left ??
+            new_pos = self._virt_board.go_left( *pos )
+            if new_pos != pos :
+                l_rob = []
+                for r in state._l_robot:
+                    if r._label == rob._label:
+                        new_rob = Robot( None )
+                        new_rob._pos = new_pos
+                        new_rob._label = rob._label
+                        l_rob.append( new_rob )
+                    else:
+                        l_rob.append( r ) # WARN : devrait copier
+                l_neighbors.append( State( l_rob ))
+        return l_neighbors
+    # --------------------------------------------------------------------- todo
+    def set_goal(self, ):
+        """ 
+        Définition (en dur) de l'état but : ROUGE en (10,4)
+        """
+        rob = Robot( None )
+        rob._pos = (10,4)
+        rob._label = "rr"
+        self._target = State( [rob] )
+    def set_start(self, ):
+        """
+        Définition (en dur) de l'état de départ : ROUGE en (0,0), BLEU en (11,6)
+        """
+        rrob = Robot( None )
+        rrob._pos = (0,0)
+        rrob._label = "rr"
+        brob = Robot( None )
+        brob._pos = (11,6)
+        brob._label = "rb"
+        self._start = State( [rrob,brob] )
+    def is_goal_reached(self, state):
+        """
+        Est-ce que 'state' vérifie le but ?
+        Arguments:
+        - `state`:
+        """
+        target = self._target._l_robot[0]
+        for r in state._l_robot:
+            if r._label == target._label and r._pos == target._pos :
+                return True
+        return False
+    # --------------------------------------------------------------------- todo
+    def is_in(self, state, alist):
+        """
+        Vrai si state est un des éléments de alist.
+        Arguments:
+        - `state`:
+        - `alist`:
+        """
+        for elem in alist:
+            if state.is_same(elem):
+                return True
+        return False
+        
+
+    # --------------------------------------------------------------------- todo
+    def dump_str(self, ):
+        """
+        """
+        dstr = ''
+        dstr += "CLOSED="+str([s.__str__() for s in self._closed])+"\n"
+        dstr = dstr + "OPEN="+str([s.__str__() for s in self._open])+"\n"
+        dstr = dstr + "CAME="+str([s.__str__()+"--->"+k.__str__() for k,s in self._came_from.iteritems()])+"\n"
+        return dstr
+    def dump_closed(self, ):
+        """
+        """
+        dstr = ''
+        dstr += "CLOSED="+str([s.__str__() for s in self._closed])+"\n"
+        return dstr
+
+
+    # --------------------------------------------------------------------- todo
+        
+        
+
+
 # ******************************************************************************
 # ******************************************************************** BraodTree
 # ******************************************************************************
@@ -341,3 +618,15 @@ class DepthTree(object):
 # ******************************************************************************
 # ************************************************************************** END
 # ******************************************************************************
+if __name__ == '__main__':
+    algo = AStar()
+    path = algo.search(1000, False)
+    if path != None :
+        print "**** Solution trouvée ***"
+        print str([s.__str__() for s in path])
+    else:
+        print ".... Pas de solution..."
+        print algo.dump_closed()
+    print "CLOSED a ",len(algo._closed)," noeuds"
+    print "OPEN a ",len(algo._open)," noeuds"
+
