@@ -85,6 +85,8 @@ class Board( gtk.DrawingArea ):
         self._cycles = []
         self._tree = []
         self._robot = []
+        self._robot_to_move = None
+        self._target = None
         # What to draw
         self._fg_draw_cycles = True
 
@@ -212,7 +214,16 @@ class Board( gtk.DrawingArea ):
         """
         for r in self._robot:
             r.draw( cr )
-
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def draw_target(self, cr):
+        """
+        Dessine la Target
+        :Param
+        - cr Cairo Context
+        """
+        if self._target != None:
+            self._target.draw( cr )
     # --------------------------------------------------------------------- draw
     def draw(self, cr, width, height):
         """
@@ -241,6 +252,7 @@ class Board( gtk.DrawingArea ):
             self.draw_cycles(cr)
         self.draw_trees(cr)
         self.draw_robots(cr)
+        self.draw_target(cr)
     # ----------------------------------------------------------------- draw_cbk
     def draw_cbk( self, widget, event ):
         """
@@ -261,16 +273,23 @@ class Board( gtk.DrawingArea ):
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
     def click_on_cell(self, pos_x, pos_y):
-        """Y met le robot rouge.
-        TODO suppose que c'est le robot rouge.
+        """Enlève le robot s'il est sur la Cell, ajoute sinon.
         :Param
         - `pos_x,pos_y`: position cliquée
         """
-        self._robot[0].remove()
-        self._robot[0].put( (pos_x,pos_y) )
+        if self._robot_to_move != None:
+            cell_here = self.get_cell( (pos_x,pos_y))
+            if cell_here._rob == self._robot[self._robot_to_move]:
+                self._robot[self._robot_to_move].remove();
+            else:
+                self._robot[self._robot_to_move].remove()
+                self._robot[self._robot_to_move].put( (pos_x,pos_y) )
+        else:
+            # Move the target
+            self._target.put( (pos_x,pos_y) )
         #
-        self.clean_cycles()
-        self.build_basic_cycles()
+        #self.clean_cycles()
+        #self.build_basic_cycles()
         #
         self.queue_draw()
 
