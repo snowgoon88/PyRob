@@ -1,5 +1,6 @@
 Réflexion de programmation et d'optimisation autour du jeu "Ricochet Robot" ou "Rasender Roboter".
 
+13/03/2013 -- GUI Interface ok pour A*
 12/03/2013 -- GUI : placer les robots et target
 	   -- GUI (a interfacer) pour lancer A*
 12/03/2013 -- Search : recherche de base avec A* sans heuristique

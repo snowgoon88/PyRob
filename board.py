@@ -777,6 +777,7 @@ def create_board16():
     c = board.get_cell( (8,7) )
     c._type = 'forbid'
     c = board.get_cell( (8,8) )
+    c._type = 'forbid'
     return board
 # **************************************************************** create_board5
 def create_board5():

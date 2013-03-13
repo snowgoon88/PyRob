@@ -36,6 +36,7 @@ class PyRob(object):
         self._board._tree.append( self._btree )
         self._dtree = DepthTree( self._board, "td" )
         self._board._tree.append( self._dtree )
+        self._atree = AStar( self._board, "ta" )
         #
         window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         window.set_title( "Ricochet Robots" )
@@ -180,13 +181,16 @@ class PyRob(object):
         self._astar_button = gtk.SpinButton(adjustment=astar_adjustment, climb_rate=0.8, digits=0)
         btn_vbox.pack_start(self._astar_button, expand=False, fill=False, padding=0)
         self._astar_button.show()
+        self._averb_btn = gtk.ToggleButton("verbeux")
+        btn_vbox.pack_start(self._averb_btn, expand=False, fill=False, padding=0)
+        self._averb_btn.show()
         reset_btn = gtk.Button("Reset")
         reset_btn.connect( "clicked", self.asearch_reset_cbk, "Reset_AT")
         btn_vbox.pack_start(reset_btn, expand=False, fill=False, padding=0)
         reset_btn.show()
         self._asearch_run_btn = gtk.Button("Run")
         self._asearch_run_btn.connect( "clicked", self.asearch_run_cbk, "Run_AT")
-        self._asearch_run_btn.set_sensitive( False )
+        #self._asearch_run_btn.set_sensitive( False )
         btn_vbox.pack_start(self._asearch_run_btn, expand=False, fill=False, padding=0)
         self._asearch_run_btn.show()
         # 
@@ -344,8 +348,8 @@ class PyRob(object):
         - `data`: extra data
         """
         print "btn  {0} pressed".format(data)
-        self._board.queue_draw()
-        # TODO : initialiser start et goal dans AStar
+        self._atree.reset_search()
+        #self._board.queue_draw()
     def asearch_run_cbk(self, widget, data=None):
         """Callbak de base pour bouton
         :Param
@@ -353,8 +357,17 @@ class PyRob(object):
         - `data`: extra data
         """
         print "btn  {0} pressed".format(data)
-        self._board.queue_draw()
-        # TODO Lancer ASTAR avec int_value = spin_button.get_value_as_int()
+        max_iteration = self._astar_button.get_value_as_int()
+        path = self._atree.search( max_iteration, verb=self._averb_btn.get_active())
+        if path != None :
+            print "**** Solution trouvée ***"
+            print str([s.__str__() for s in path])
+        else:
+            print ".... Pas de solution..."
+            print self._atree.dump_closed()
+        print "CLOSED a ",len(self._atree._closed)," noeuds"
+        print "OPEN a ",len(self._atree._open)," noeuds"
+        #self._board.queue_draw()
         
 
 # ******************************************************************************

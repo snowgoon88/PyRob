@@ -53,12 +53,52 @@ class AStar(object):
     """
     """
     # --------------------------------------------------------------------- todo
-    def __init__(self,):
+    def __init__(self, board, label="astar"):
         """
+        Attaché à un vrai Board, avec un label unique!
+        :Param
+        - board un Board
+        - label (str) doit être unique
         """
+        # un label
+        self._label = label
+        # un board
+        self._bb = board
+        
         self._virt_board = BO.create_board16()
         self.set_goal()
         self.set_start()
+        self._closed = []
+        self._open = [self._start]
+        self._came_from = {}
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------- todo
+    def reset_search(self, ):
+        """
+        Initialise 'start' et 'goal' à partir du vrai Board.
+        Toujours le ROUGE comme but !
+        """
+        # Target pour le robot rouge
+        if self._bb._target != None:
+            rob = Robot( None )
+            rob._pos = self._bb._target._pos
+            rob._label = "rr"
+            self._target = State( [rob] )
+        else:
+            self._target = None
+        # Les robots
+        l_rob = []
+        for r in self._bb._robot:
+            cell = self._bb.get_cell( r._pos )
+            print r._label,":",r._pos," in ",cell
+            # On ne considère que les robots qui ne sont pas au centre
+            if cell._type != 'forbid':
+                rob = Robot( None )
+                rob._pos = r._pos
+                rob._label = r._label
+                l_rob.append( rob )
+        self._start = State( l_rob )
+        #
         self._closed = []
         self._open = [self._start]
         self._came_from = {}
