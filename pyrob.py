@@ -276,6 +276,7 @@ class PyRob(object):
         print "btn  {0} pressed".format(data)
         self._board.clean_cycles()
         self._board.build_basic_cycles()
+        self._board.check_cycle_extremities()
         self._board.queue_draw()
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo

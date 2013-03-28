@@ -377,9 +377,42 @@ class Board( gtk.DrawingArea ):
                 # Faire un nouveau cycle
                 cyc = Cycle( self, 'c'+str(len(self._cycles)) )
                 cyc.build_from_corner( coin._pos, 15 )
+                print cyc
                 cyc._color = Grafik._colors[len(self._cycles) % len(Grafik._colors)]
                 self._cycles.append( cyc )
         print "Trouvé ",len(self._cycles)," cycles"
+    # --------------------------------------------------------------------- todo
+    def check_cycle_extremities(self, ):
+        """
+        Vérifie que les extrémités des Cycles sont bien sur d'autres Cycles.
+        """
+        # TODO Faire une liste des points extrémités, et dépiler cette liste
+        # TODO au fur et à mesure. Cela évitera de tester ds 'build_perpendi...'
+        # TODO Faut faire des Pop et Push.
+        # Cycles
+        for cyc in self._cycles:
+            for ext in cyc._ext:
+                # Nombre de tag qui commencent par "c"
+                l_tag = []
+                for tag in ext._values.keys():
+                    if tag.startswith('c'):
+                        l_tag.append( tag )
+                # Devrait y avoir 2 cycles.
+                if len(l_tag) == 1:
+                    print ext," has ",len(l_tag)
+                    # Si 3 direction, Cycle boucle sur lui même. Pas grave
+                    # Si 1 direction, ajouter un Cycle qui croise.
+                    if len(ext._values[l_tag[0]]) == 1:
+                        new_cycle = Cycle( self, 'c'+str(len(self._cycles)) )
+                        print " build cycle perp to ",ext._values[l_tag[0]][0]," from ",ext._pos
+                        res = new_cycle.build_perpendicular_to(ext._pos, ext._values[l_tag[0]][0])
+                        if res is not None:
+                            print new_cycle
+                            # TODO Verifier que les extrémités ne sont pas à augmenter
+                            # TODO Renvooyer extrémité avec dir si c'est le cas
+                            new_cycle._color = Grafik._colors[len(self._cycles) % len(Grafik._colors)]
+                            self._cycles.append( new_cycle )
+                                
     # ------------------------------------------------------------ detect_corner
     def detect_corners( self ):
         """
@@ -392,23 +425,24 @@ class Board( gtk.DrawingArea ):
             for y in range(self._size):
                 # Pas forbid
                 cell = self.get_cell((x,y))
-                if cell._type == 'forbid':
-                    break
-                cell._type = 'void'
-                # nb de mur
-                nb_ver = 0
-                nb_hor = 0
-                if x == 0 or x in self._ver_wall[y] or self.get_cell((x-1,y)).has_rob():
-                    nb_ver += 1
-                if x == (self._size-1) or (x+1) in self._ver_wall[y] or self.get_cell((x+1,y)).has_rob():
-                    nb_ver += 1
-                if y == 0 or y in self._hor_wall[x] or self.get_cell((x,y-1)).has_rob():
-                    nb_hor += 1
-                if y == (self._size-1) or (y+1) in self._hor_wall[x] or self.get_cell((x,y+1)).has_rob():
-                    nb_hor += 1
-                if nb_ver == 1 and nb_hor == 1:
-                    cell._type = 'corner'
-                    corners.append( cell )
+                if cell._type != 'forbid':
+                    cell._type = 'void'
+                    # nb de mur
+                    nb_ver = 0
+                    nb_hor = 0
+                    if x == 0 or x in self._ver_wall[y] or self.get_cell((x-1,y)).has_rob():
+                        nb_ver += 1
+                    if x == (self._size-1) or (x+1) in self._ver_wall[y] or self.get_cell((x+1,y)).has_rob():
+                        nb_ver += 1
+                    if y == 0 or y in self._hor_wall[x] or self.get_cell((x,y-1)).has_rob():
+                        nb_hor += 1
+                    if y == (self._size-1) or (y+1) in self._hor_wall[x] or self.get_cell((x,y+1)).has_rob():
+                        nb_hor += 1
+                    # debug
+                    print "Cell : ",cell._pos," => V=",nb_ver," H=",nb_hor
+                    if nb_ver == 1 and nb_hor == 1:
+                        cell._type = 'corner'
+                        corners.append( cell )
         return corners
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -492,8 +526,15 @@ class Cycle:
         self._ext = []
         self._arcs = []
         self._color = (0,1,0)
-
-
+    # ---------------------------------------------------------------------- str
+    def __str__(self):
+        """
+        Représentation comme str d'un Cycle
+        """
+        cyc_str = "CYCLE_"+self._label+"\n"
+        for pt in self._points:
+            cyc_str += "   "+self._bb.get_cell(pt).__str__()+"\n"
+        return cyc_str
     # --------------------------------------------------------------------- draw
     def draw( self, cr):
         """
@@ -503,7 +544,7 @@ class Cycle:
         """
         # couleur et épaisseur
         cr.set_source_rgb( *self._color )
-        cr.set_line_width(0.02)
+        cr.set_line_width(0.1)
         for arc in self._arcs:
             # segments
             cr.move_to( *arc[0] )
@@ -511,7 +552,12 @@ class Cycle:
         cr.stroke()
         # extremités
         for ext in self._ext:
-            cr.arc( ext._pos[0], ext._pos[1], 0.05, 0, math.pi*2 )
+            # cr.arc( ext._pos[0], ext._pos[1], 0.05, 0, math.pi*2 )
+            cr.move_to( ext._pos[0], ext._pos[1]+0.1 )
+            cr.line_to( ext._pos[0]+0.1, ext._pos[1])
+            cr.line_to( ext._pos[0], ext._pos[1]-0.1)
+            cr.line_to( ext._pos[0]-0.1, ext._pos[1])
+            cr.line_to( ext._pos[0], ext._pos[1]+0.1)
             cr.stroke()
 
     # -------------------------------------------------------------------- clean
@@ -538,6 +584,119 @@ class Cycle:
         
         self._points = [pos]
         self.expand( pos, None )
+    # --------------------------------------------------------------------- todo
+    def build_perpendicular_to(self, pos, dir):
+        """
+        Construit à partir d'un point qui est une extrémité sans suite.
+        i.e, qui ne débouche sur rien.
+        Return :
+        - paires (pos, dir) si les extrémités sont a étendre aussi
+        - None si le Cycle est nul
+        Arguments:
+        - `pos`: (x,y) pt de départ
+        - `dir`: direction perpendiculaire à la direction de recherche
+        """
+        to_extend = []
+        # Normalement, les deux extrémités qu'on va construire ne sont ni
+        # des coins, ni le point de départ de la recherche.
+        # Par contre, ces nouvelles extrémités peuvent de nouveaux être
+        # des points de départ de 'build_perpendicular_to()'
+        if dir == 'Up' or dir == 'Down':
+            pos1 = self._bb._go['Left']( *pos )
+            pos2 = self._bb._go['Right']( *pos )
+            print "Extension de ",pos1," à ",pos2
+            if pos1 == pos2 :
+                return None
+            # nouvel arc
+            self._arcs.append( (pos1, pos2) )
+            # maj des Cell de l'arc
+            # start
+            pos_cell = (pos1[0],pos1[1])
+            cell = self._bb.get_cell( pos_cell )
+            cell.append_to_tag( self._label, 'Right' )
+            self._ext.append( cell )
+            self._points.append( pos1 )
+            # Tester s'il faut étendre les extrémités
+            # Nombre de tag qui commencent par "c"
+            l_tag = []
+            for tag in cell._values.keys():
+                    if tag.startswith('c'):
+                        l_tag.append( tag )
+            # Devrait y avoir 2 cycles.
+            if len(l_tag) == 1:
+                print pos1," a étendre"
+                to_extend.append( (pos1, 'Left') )
+            # middle
+            for x in range( pos1[0]+1, pos2[0]) :
+                pos_cell = (x,pos1[1])
+                cell = self._bb.get_cell( pos_cell )
+                cell.append_to_tag( self._label, 'Right' )
+                cell.append_to_tag( self._label, 'Left' )
+            # end
+            pos_cell = (pos2[0],pos1[1])
+            cell = self._bb.get_cell( pos_cell )
+            cell.append_to_tag( self._label, 'Left')
+            self._ext.append( cell )
+            self._points.append( pos2 )
+            # Tester s'il faut étendre les extrémités
+            # Nombre de tag qui commencent par "c"
+            l_tag = []
+            for tag in cell._values.keys():
+                    if tag.startswith('c'):
+                        l_tag.append( tag )
+            # Devrait y avoir 2 cycles.
+            if len(l_tag) == 1:
+                print pos2," a étendre"
+                to_extend.append( (pos2, 'Right') )
+        elif dir == 'Right' or dir == 'Left':
+            pos1 = self._bb._go['Down']( *pos )
+            pos2 = self._bb._go['Up']( *pos )
+            print "Extension de ",pos1," à ",pos2
+            if pos1 == pos2 :
+                return None
+            # nouvel arc
+            self._arcs.append( (pos1, pos2) )
+            # maj des Cell de l'arc
+            # start
+            pos_cell = (pos1[0],pos1[1])
+            cell = self._bb.get_cell( pos_cell )
+            cell.append_to_tag( self._label, 'Up' )
+            self._ext.append( cell )
+            self._points.append( pos1 )
+            # Tester s'il faut étendre les extrémités
+            # Nombre de tag qui commencent par "c"
+            l_tag = []
+            for tag in cell._values.keys():
+                    if tag.startswith('c'):
+                        l_tag.append( tag )
+            # Devrait y avoir 2 cycles.
+            if len(l_tag) == 1:
+                print pos1," a étendre"
+                to_extend.append( (pos1, 'Down') )
+            # middle
+            for x in range( pos1[0]+1, pos2[0]) :
+                pos_cell = (x,pos1[1])
+                cell = self._bb.get_cell( pos_cell )
+                cell.append_to_tag( self._label, 'Up' )
+                cell.append_to_tag( self._label, 'Down' )
+            # end
+            pos_cell = (pos2[0],pos1[1])
+            cell = self._bb.get_cell( pos_cell )
+            cell.append_to_tag( self._label, 'Down')
+            self._ext.append( cell )
+            self._points.append( pos2 )
+            # Tester s'il faut étendre les extrémités
+            # Nombre de tag qui commencent par "c"
+            l_tag = []
+            for tag in cell._values.keys():
+                    if tag.startswith('c'):
+                        l_tag.append( tag )
+            # Devrait y avoir 2 cycles.
+            if len(l_tag) == 1:
+                print pos2," a étendre"
+                to_extend.append( (pos2, 'Up') )
+
+        return to_extend
     # ------------------------------------------------------------------- expand
     def expand( self, pos, dir_ori, depth=0 ):
         """
@@ -558,9 +717,9 @@ class Cycle:
             self._ext.append( cell )
             return
         # Vers la droite
-        if dir_ori != self._bb.go_left :
+        if dir_ori != 'Left':
             print tab,"-> droite"
-            possible = self._bb.go_right( *pos )
+            possible = self._bb._go['Right']( *pos )
             if possible <> pos :
                 print tab,"ok de ",pos," à ",possible
                 # nouvel arc
@@ -569,17 +728,17 @@ class Cycle:
                 # start
                 pos_cell = (pos[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_right )
+                cell.append_to_tag( self._label, 'Right' )
                 # middle
                 for x in range( pos[0]+1, possible[0]) :
                     pos_cell = (x,pos[1])
                     cell = self._bb.get_cell( pos_cell )
-                    cell.append_to_tag( self._label, self._bb.go_right )
-                    cell.append_to_tag( self._label, self._bb.go_left )
+                    cell.append_to_tag( self._label, 'Right' )
+                    cell.append_to_tag( self._label, 'Left' )
                 # end
                 pos_cell = (possible[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_left )
+                cell.append_to_tag( self._label, 'Left' )
                 # On continue ?
                 if possible in self._points :
                     # # c'est aussi une extrémité
@@ -587,11 +746,11 @@ class Cycle:
                     return
                 else :
                     self._points.append( possible )
-                    self.expand( possible, self._bb.go_right, depth+1)
+                    self.expand( possible, 'Right', depth+1)
         # Vers le bas
-        if dir_ori != self._bb.go_up :
+        if dir_ori != 'Up' :
             print tab,"-> bas"
-            possible = self._bb.go_down( *pos )
+            possible = self._bb._go['Down']( *pos )
             if possible <> pos :
                 print tab,"ok de ",pos," à ",possible
                 # nouvel arc
@@ -600,17 +759,17 @@ class Cycle:
                 # start
                 pos_cell = (pos[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_down )
+                cell.append_to_tag( self._label, 'Down' )
                 # middle
                 for y in range( possible[1]+1, pos[1]) :
                     pos_cell = (pos[0],y)
                     cell = self._bb.get_cell( pos_cell )
-                    cell.append_to_tag( self._label, self._bb.go_down )
-                    cell.append_to_tag( self._label, self._bb.go_up )
+                    cell.append_to_tag( self._label, 'Down' )
+                    cell.append_to_tag( self._label, 'Up' )
                 # end
                 pos_cell = (pos[0],possible[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_up )
+                cell.append_to_tag( self._label, 'Up' )
                 # On continue ?
                 if possible in self._points :
                     # # c'est aussi une extrémité
@@ -618,11 +777,11 @@ class Cycle:
                     return
                 else :
                     self._points.append( possible )
-                    self.expand( possible, self._bb.go_down, depth+1)
+                    self.expand( possible, 'Down', depth+1)
         # Vers la gauche
-        if dir_ori != self._bb.go_right :
+        if dir_ori != 'Right' :
             print tab,"-> gauche"
-            possible = self._bb.go_left( *pos )
+            possible = self._bb._go['Left']( *pos )
             if possible <> pos :
                 print tab,"ok de ",pos," à ",possible
                 # nouvel arc
@@ -631,17 +790,17 @@ class Cycle:
                 # start
                 pos_cell = (pos[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_left )
+                cell.append_to_tag( self._label, 'Left' )
                 # middle
                 for x in range( possible[0]+1, pos[0]) :
                     pos_cell = (x,pos[1])
                     cell = self._bb.get_cell( pos_cell )
-                    cell.append_to_tag( self._label, self._bb.go_right )
-                    cell.append_to_tag( self._label, self._bb.go_left )
+                    cell.append_to_tag( self._label, 'Right' )
+                    cell.append_to_tag( self._label, 'Left' )
                 # end
                 pos_cell = (possible[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_right )
+                cell.append_to_tag( self._label, 'Right' )
                 # On continue ?
                 if possible in self._points :
                     # # c'est aussi une extrémité
@@ -649,11 +808,11 @@ class Cycle:
                     return
                 else :
                     self._points.append( possible )
-                    self.expand( possible, self._bb.go_left, depth+1)
+                    self.expand( possible, 'Left', depth+1)
         # Vers le haut
-        if dir_ori != self._bb.go_down :
+        if dir_ori != 'Down' :
             print tab,"-> haut"
-            possible = self._bb.go_up( *pos )
+            possible = self._bb._go['Up']( *pos )
             if possible <> pos :
                 print tab,"ok de ",pos," à ",possible
                 # nouvel arc
@@ -662,17 +821,17 @@ class Cycle:
                 # start
                 pos_cell = (pos[0],pos[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_up )
+                cell.append_to_tag( self._label, 'Up' )
                 # middle
                 for y in range( pos[1]+1, possible[1]) :
                     pos_cell = (pos[0],y)
                     cell = self._bb.get_cell( pos_cell )
-                    cell.append_to_tag( self._label, self._bb.go_down )
-                    cell.append_to_tag( self._label, self._bb.go_up )
+                    cell.append_to_tag( self._label, 'Down' )
+                    cell.append_to_tag( self._label, 'Up')
                 # end
                 pos_cell = (pos[0],possible[1])
                 cell = self._bb.get_cell( pos_cell )
-                cell.append_to_tag( self._label, self._bb.go_down )
+                cell.append_to_tag( self._label, 'Down' )
                 # On continue ?
                 if possible in self._points :
                     # # c'est aussi une extrémité
@@ -680,7 +839,7 @@ class Cycle:
                     return
                 else :
                     self._points.append( possible )
-                    self.expand( possible, self._bb.go_up, depth+1)
+                    self.expand( possible, 'Up', depth+1)
             # Rien d'autre à essayer
             print tab," Rien d'autre à essayer"
     def on_cycle(self, pos):

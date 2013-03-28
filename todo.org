@@ -1,16 +1,26 @@
+#+STARTUP: hidestars
+
 * ? Séparer Cycle, ToReach en différentes classes
 * DONE Faire un GIT
+* TODO Remplacer direction par String (board.py:Board:self._go)
+Y'a un exemple dans search.
+** DONE Dans Cycle:expand et Cycle:build_perpendicular_to
 * [1/2] GUI
 ** DONE On/off Cycles avec update
 ** TODO ON:Off continuous update of cycles.
-* [2/2] Cycle
+* [3/5] Cycle
+** DONE Existe un coin qui n'est pas prolongé (8,15)
+** TODO Certaines extrémités donnent sur rien => ajouter des cycles
+** TODO Extrémité que quand changement de cycle ? 
+=> Vérifier, en fin de calcul, toutes les extrémités ?
 ** DONE mémoriser les extrémités
 ** DONE dessiner les extrémites
-* [2/4] Robots
+* [3/5] Robots
 ** DONE Placer robot
-** Couper un cycle par un robot
+** TODO Couper un cycle par un robot
 Pas forcément utile parce que selon l'ordre dans lequel on place ou déplace les robots, un Cyle "parent" coupé et recoupé ne va pas forcément bien se recombiner. Il semble plus facile de reconstruire les Cycles à chaque fois...
+=> Pas sûr
 ** DONE Tenir compte de robots dans Cycle
-** TODO Déplacer robot à la souris
+** DONE Déplacer robot à la souris
 ** TODO Incorporer les robots dans pyrob
 
