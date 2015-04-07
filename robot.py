@@ -20,6 +20,16 @@ class Robot(object):
         self._board = board
         self._color = col
         self._pos = None
+    # ------------------------------------------------------------ display_str
+    def display_str(self, ):
+        """ Affichage
+        """
+        disp = "Rob_"+self._label
+        if self._pos :
+            disp += " at " + str(self._pos)
+        else :
+            disp += " at None"
+        return disp
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -67,7 +77,7 @@ class Target(object):
     
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
-    def __init__(self, board, col=(0,0,0), label="ta"):
+    def __init__(self, board, col=(0,0,0), label="ta", l_robot=None):
         """
         Une Target, associé à une Board.
         """
@@ -75,6 +85,17 @@ class Target(object):
         self._board = board
         self._color = col
         self._pos = None
+        self._l_rob = l_robot
+    # ------------------------------------------------------------ display_str
+    def display_str(self, ):
+        """ Affichage
+        """
+        disp = "Tar_"+self._label
+        if self._pos :
+            disp += " at " + str(self._pos)
+        else :
+            disp += " at None"
+        return disp
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------- todo
@@ -122,7 +143,10 @@ class RobotPosError(Exception):
         :Param
         - `cell`: Cell
         """
-        Exception.__init__( 'Rob mal placé pos={0}, type={1}, rob={2}'.format( cell._pos, cell._type, cell._rob))
+        if cell._rob:
+            self.msg = 'Rob mal placé pos={0}, type={1}, rob={2}'.format( cell._pos, cell._type, cell._rob._label)
+        else:
+            self.msg = 'Rob mal placé pos={0}, type={1}, rob={2}'.format( cell._pos, cell._type, "None")
 
 # ******************************************************************************
 # ************************************************************************** END
